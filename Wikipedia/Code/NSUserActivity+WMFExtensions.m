@@ -1,5 +1,6 @@
 #import <WMF/NSUserActivity+WMFExtensions.h>
 #import <WMF/WMF-Swift.h>
+#import <MapKit/MapKit.h>
 
 @import CoreSpotlight;
 @import MobileCoreServices;
@@ -57,6 +58,100 @@ __attribute__((annotate("returns_localized_nsstring"))) static inline NSString *
     NSUserActivity *activity = [self wmf_activityWithType:@"Content"];
     activity.userInfo = @{@"WMFURL": url};
     return activity;
+}
+
++ (instancetype)wmf_locationActivityWithURL:(NSURL *)activityURL {
+    NSUserActivity *activity = [self wmf_pageActivityWithName:@"Location"];
+
+    CLLocationCoordinate2D coordinate = [self wmf_extractCoordinatesFromURL:activityURL];
+
+    if (CLLocationCoordinate2DIsValid(coordinate)) {
+
+        // Create an MKPlacemark with the coordinate
+        MKPlacemark *placemark = [[MKPlacemark alloc] initWithCoordinate:coordinate];
+        // Create an MKMapItem with the MKPlacemark
+        MKMapItem *mapItem = [[MKMapItem alloc] initWithPlacemark:placemark];
+
+        activity.mapItem = mapItem;
+    }
+
+    return activity;
+}
+
++ (CLLocationCoordinate2D)wmf_extractCoordinatesFromURL:(NSURL *)url {
+    // Initialize the coordinate with invalid values
+    CLLocationCoordinate2D coordinate = kCLLocationCoordinate2DInvalid;
+
+    // 1. Parse the URL components
+    NSURLComponents *components = [NSURLComponents componentsWithURL:url resolvingAgainstBaseURL:NO];
+
+    // 2. Extract the query items
+    NSArray<NSURLQueryItem *> *queryItems = components.queryItems;
+
+    // 3. Create variables to hold latitude and longitude values
+    NSString *latitudeString = nil;
+    NSString *longitudeString = nil;
+
+    // 4. Loop through the query items to find latitude and longitude
+    for (NSURLQueryItem *item in queryItems) {
+        if ([item.name isEqualToString:@"lat"]) {
+            latitudeString = item.value;
+        } else if ([item.name isEqualToString:@"lon"]) {
+            longitudeString = item.value;
+        }
+    }
+
+    // 5. Check if both latitude and longitude are present
+    if ([self wmf_isLaValidLatitude:latitudeString longitude:longitudeString]) {
+        coordinate.latitude = [latitudeString doubleValue];
+        coordinate.longitude = [longitudeString doubleValue];
+    }
+
+    return coordinate;
+}
+
++ (BOOL)wmf_isLaValidLatitude:(NSString *)latitudeString longitude:(NSString *)longitudeString {
+
+    if (![self wmf_isValidLatitude:latitudeString] || ![self wmf_isValidLongitude:longitudeString]) {
+        return NO;
+    }
+    return YES;
+}
+
++ (BOOL)wmf_isValidLongitude:(NSString *)longitudeString {
+    // check if string is not nil
+    if (longitudeString == nil) {
+        return NO;
+    }
+    // check if string is not empty
+    if (longitudeString.length == 0) {
+        return NO;
+    }
+    // check if longitude value must be between -180 and 180 degrees.
+    double longitude = [longitudeString doubleValue];
+    if (longitude < -180.0 || longitude > 180.0) {
+        return  NO;
+    }
+
+    return YES;
+}
+
++ (BOOL)wmf_isValidLatitude:(NSString *)latitudeString {
+    // check if string is not nil
+    if (latitudeString == nil) {
+        return NO;
+    }
+    // check if string is not empty
+    if (latitudeString.length == 0) {
+        return NO;
+    }
+    // check if latitude value must be between -90 and 90 degrees.
+    double latitude = [latitudeString doubleValue];
+    if (latitude < -90.0 || latitude > 90.0) {
+        return  NO;
+    }
+
+    return YES;
 }
 
 + (instancetype)wmf_placesActivityWithURL:(NSURL *)activityURL {
@@ -125,6 +220,8 @@ __attribute__((annotate("returns_localized_nsstring"))) static inline NSString *
         return [self wmf_exploreViewActivity];
     } else if ([url.host isEqualToString:@"places"]) {
         return [self wmf_placesActivityWithURL:url];
+    } else if ([url.host isEqualToString:@"location"]) {
+        return [self wmf_locationActivityWithURL:url];
     } else if ([url.host isEqualToString:@"saved"]) {
         return [self wmf_savedPagesViewActivity];
     } else if ([url.host isEqualToString:@"history"]) {
@@ -211,6 +308,8 @@ __attribute__((annotate("returns_localized_nsstring"))) static inline NSString *
         NSString *page = self.userInfo[@"WMFPage"];
         if ([page isEqualToString:@"Explore"]) {
             return WMFUserActivityTypeExplore;
+        } else if ([page isEqualToString:@"Location"]) {
+            return WMFUserActivityTypeLocation;
         } else if ([page isEqualToString:@"Places"]) {
             return WMFUserActivityTypePlaces;
         } else if ([page isEqualToString:@"Saved"]) {
@@ -293,6 +392,8 @@ __attribute__((annotate("returns_localized_nsstring"))) static inline NSString *
         case WMFUserActivityTypePlaces:
             host = @"places";
             break;
+        case WMFUserActivityTypeLocation:
+            host = @"location";
         case WMFUserActivityTypeExplore:
         default:
             host = @"explore";

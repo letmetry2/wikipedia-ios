@@ -1152,6 +1152,7 @@ NSString *const WMFLanguageVariantAlertsLibraryVersion = @"WMFLanguageVariantAle
     switch ([activity wmf_type]) {
         case WMFUserActivityTypeExplore:
         case WMFUserActivityTypePlaces:
+        case WMFUserActivityTypeLocation:
         case WMFUserActivityTypeSavedPages:
         case WMFUserActivityTypeHistory:
         case WMFUserActivityTypeSearch:
@@ -1199,6 +1200,16 @@ NSString *const WMFLanguageVariantAlertsLibraryVersion = @"WMFLanguageVariantAle
             [self setSelectedIndex:WMFAppTabTypeMain];
             [self.currentTabNavigationController popToRootViewControllerAnimated:animated];
             break;
+        case WMFUserActivityTypeLocation: {
+            [self dismissPresentedViewControllers];
+            [self setSelectedIndex:WMFAppTabTypePlaces];
+            [self.currentTabNavigationController popToRootViewControllerAnimated:animated];
+            MKMapItem *mapItem = activity.mapItem;
+            if (mapItem) {
+                [[self placesViewController] updateViewModeToMap];
+                [[self placesViewController] showLocation:mapItem];
+            }
+        } break;
         case WMFUserActivityTypePlaces: {
             [self dismissPresentedViewControllers];
             [self setSelectedIndex:WMFAppTabTypePlaces];

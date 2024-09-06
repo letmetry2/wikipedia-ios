@@ -1951,7 +1951,14 @@ class PlacesViewController: ViewController, UISearchBarDelegate, ArticlePopoverV
         let searchResult = MWKSearchResult(articleID: 0, revID: 0, title: title, displayTitle: displayTitle, displayTitleHTML: displayTitleHTML, wikidataDescription: article.wikidataDescription, extract: article.snippet, thumbnailURL: article.thumbnailURL, index: nil, titleNamespace: nil, location: article.location)
         currentSearch = PlaceSearch(filter: .top, type: .location, origin: .user, sortStyle: .links, string: nil, region: region, localizedDescription: title, searchResult: searchResult, siteURL: articleURL.wmf_site)
     }
-    
+
+    @objc public func showLocation(_ mapItem: MKMapItem) {
+        guard view != nil else { // force view instantiation
+            return
+        }
+        zoomAndPanMapView(toLocation: mapItem.placemark.location!)
+    }
+
     fileprivate func searchForFirstSearchSuggestion() {
         if !searchSuggestionController.searches[PlaceSearchSuggestionController.completionSection].isEmpty {
             currentSearch = searchSuggestionController.searches[PlaceSearchSuggestionController.completionSection][0]
